@@ -11,6 +11,7 @@ from city.crud import (
 )
 from db.engine import SessionLocal
 
+
 router = APIRouter()
 
 
@@ -49,4 +50,3 @@ def delete_city(
         db: Session = Depends(get_db)
 ) -> None | dict:
     return crud_delete_city(db, city_id)
-

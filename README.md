@@ -30,7 +30,7 @@ This is a FastAPI application that manages city data and their corresponding tem
    Note: Please pay attention to the .env.simple file and override it as needed for your environment configuration.
 
       ```bash
-      uvicorn app.main:app --reload
+      uvicorn main:app --reload
 
 ## Endpoints
 1. ### City CRUD API
