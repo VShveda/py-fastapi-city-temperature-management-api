@@ -1,13 +1,18 @@
+from typing import Sequence
+
 import aiohttp
-from sqlalchemy.orm import Session
+
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from temperature.models import Temperature
 from city.models import City
 
 
-async def update_temperatures(db: Session, open_weather_map_key: str) -> None:
-    cities = db.query(City).all()
+async def update_temperatures(db: AsyncSession, open_weather_map_key: str) -> None:
+    result = await db.execute(select(City))
+    cities = result.scalars().all()
     async with aiohttp.ClientSession() as session:
         for city in cities:
             async with session.get(
@@ -23,19 +28,17 @@ async def update_temperatures(db: Session, open_weather_map_key: str) -> None:
                         city_id=city.id
                     )
                     db.add(temperature)
-                    db.commit()
+        await db.commit()
 
 
-def get_temperatures(db: Session) -> list[Temperature]:
-    return db.query(Temperature).all()
+async def get_temperatures(db: AsyncSession) -> Sequence[Temperature]:
+    result = await db.execute(select(Temperature))
+    return result.scalars().all()
 
 
-def get_temperature_by_city_id(db: Session, city_id: int) -> list[Temperature]:
-    temperatures = (
-        db.query(Temperature)
-        .filter(Temperature.city_id == city_id)
-        .all()
-    )
+async def get_temperature_by_city_id(db: AsyncSession, city_id: int) -> Sequence[Temperature]:
+    result = await db.execute(select(Temperature).where(Temperature.city_id == city_id))
+    temperatures = result.scalars().all()
     if not temperatures:
         raise HTTPException(status_code=404, detail="Temperature not found")
     return temperatures

@@ -1,34 +1,36 @@
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import NoResultFound
+from typing import Sequence
+
+from sqlalchemy.future import select
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from city.models import City
 from city.schemas import CityCreate
 
 
-def get_cities(db: Session) -> list[City]:
-    return db.query(City).all()
+async def get_cities(db: AsyncSession) -> Sequence[City]:
+    result = await db.execute(select(City))
+    return result.scalars().all()
 
 
-def create_city(db: Session, city: CityCreate) -> City:
+async def create_city(db: AsyncSession, city: CityCreate) -> City:
     db_city = City(name=city.name, additional_info=city.additional_info)
     db.add(db_city)
-    db.commit()
-    db.refresh(db_city)
+    await db.commit()
+    await db.refresh(db_city)
     return db_city
 
 
-def get_city(db: Session, city_id: int) -> City:
-    try:
-        return db.query(City).filter(City.id == city_id).one()
-    except NoResultFound:
+async def get_city(db: AsyncSession, city_id: int) -> City:
+    city = await db.scalar(select(City).where(City.id == city_id))
+    if city is None:
         raise HTTPException(status_code=404, detail="City not found")
+    return city
 
 
-def delete_city(db: Session, city_id: int) -> dict:
-    city = db.query(City).filter(City.id == city_id).first()
-    if not city:
-        raise HTTPException(status_code=404, detail="City not found")
-    db.delete(city)
-    db.commit()
+async def delete_city(db: AsyncSession, city_id: int) -> dict:
+    action = delete(City).where(City.id == city_id)
+    await db.execute(action)
+    await db.commit()
     return {"message": "City deleted"}
